@@ -1,0 +1,37 @@
+{
+    "name": "Medium Chrome Extension",
+    "description": "Download the print-ready medium article",
+    "version": "0.0.1",
+    "action": {},
+    "permissions": [
+        "scripting",
+        "activeTab",
+        "tabs",
+        "storage"
+    ],
+    "web_accessible_resources": [
+        {
+          "resources": [
+            "images/book32.png"
+          ],
+          "matches": ["*://medium.com/*"]
+        }
+      ],
+    "content_scripts": [{
+        "matches": ["*://medium.com/*"],
+        "js": ["contentScript.js"],
+        "run_at": "document_idle"
+    }],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "host_permissions": ["*://medium.com/*"],
+    "icons": {
+        "16": "images/book16.png",
+        "32": "images/book32.png",
+        "48": "images/book48.png",
+        "64": "images/book64.png",
+        "128": "images/book128.png"
+    },
+    "manifest_version": 3
+}
