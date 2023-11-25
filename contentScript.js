@@ -33,7 +33,7 @@
             for(let i=0; i<scriptNodes.length; i++) {
                 scriptNode += "<script src='" + scriptNodes[i].src + "' />";
             }
-            var modifiedHtml = headerNode + "<div class='ab cb cc'><main class='cd ce cf cg ch ci l cj'><div class='l'>" + firstDiv.innerHTML + "</div></main></div>" + scriptNode;
+            var modifiedHtml = headerNode + "<div style='justify-content: center;' class='ab cb cc'><main class='cd ce cf cg ch ci l cj'><div class='l'>" + firstDiv.innerHTML + "</div></main></div>" + scriptNode;
 
             var file = new Blob([modifiedHtml], { type: "text/html" });
             var link = document.createElement("a");
