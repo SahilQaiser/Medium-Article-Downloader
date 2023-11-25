@@ -1,52 +1,113 @@
-(() => {
-    articletId = document.URL.split("/")[4];
+// Constants
+var SELECTORS = {
+  ARTICLE: 'article', 
+  HEAD: 'head',
+  STYLE: 'style',
+  META: 'meta',
+  SCRIPT: 'script'  
+}
+
+var TIMER = 1000;
+
+// Helper functions
+async function getArticleMetadata(url) {
+    // Logic to extract id, title, author
+    articletId = url.split("/")[4];
     if (typeof articletId == "undefined") {
-        articletId = document.URL.split("/")[3];
+        articletId = url.split("/")[3];
     }
-    articletAuthor = document.URL.split("/")[3];
+    articletAuthor = url.split("/")[3];
     articleTitle = document.title;
-    let fromBackground = true;
+    return {articletId, articleTitle, articletAuthor}; 
+}
 
-    const extractNewArticleEventHandler = () => {
-        console.log("Got the articleId : " + articletId + " and articleTitle : " + articleTitle +" and articleAuthor : " + articletAuthor);
-        // var mainDiv = document.getElementsByTagName("main")[0];
-        if (document.getElementsByTagName("article")) {
-            var articleDiv = document.getElementsByTagName("article")[0];
-            var firstDiv = articleDiv.getElementsByTagName("section")[0];
-            const header = document.getElementsByTagName("head")[0];
-            const styleNodes = header.getElementsByTagName("style");
-            const metaNodes = header.getElementsByTagName("meta");
-            const scriptNodes = document.getElementsByTagName("body")[0].getElementsByTagName("script");
-            var headerNode = "<head>";
-            for(let i=0; i<styleNodes.length; i++) {
-                if (styleNodes[i].getAttribute("data-fela-type") === "KEYFRAME") {
-                    // skip style nodes with data-fela-type="KEYFRAME"
-                    continue;
-                }
-                headerNode += `<style>${styleNodes[i].innerHTML}</style>`;
-            }
-            for(let i=0; i<metaNodes.length; i++) {
-                headerNode += "<meta name='" + metaNodes[i].name + "' data-rh='" + metaNodes[i].dataset.rh + "' content='" + metaNodes[i].content + "' />";
-            }
-            headerNode += "</head>";
-            scriptNode = "";
-            for(let i=0; i<scriptNodes.length; i++) {
-                scriptNode += "<script src='" + scriptNodes[i].src + "' />";
-            }
-            var modifiedHtml = headerNode + "<div style='justify-content: center;' class='ab cb cc'><main class='cd ce cf cg ch ci l cj'><div class='l'>" + firstDiv.innerHTML + "</div></main></div>" + scriptNode;
+function buildArticleHTML({metadata, content}) {
+    // Extract required nodes
+    const header = document.getElementsByTagName("head")[0];
+    const styleNodes = header.querySelectorAll(SELECTORS.STYLE); 
+    const metaNodes = header.querySelectorAll(SELECTORS.META);
 
-            var file = new Blob([modifiedHtml], { type: "text/html" });
-            var link = document.createElement("a");
-            link.download = articletId + ".html";
-            link.href = URL.createObjectURL(file);
-            link.click();
+    // Build header HTML
+    var headerNode = "<head>";
+    styleNodes.forEach(style => {
+      if (style.getAttribute("data-fela-type") !== "KEYFRAME") {
+        headerNode += `<style>${style.innerHTML}</style>`  
+      }
+    });
+
+    metaNodes.forEach(meta => {
+      headerNode += `
+        <meta 
+          name='${meta.name}'
+          data-rh='${meta.dataset.rh}' 
+          content='${meta.content}'
+        />
+      `; 
+    });
+
+    headerNode += "</head>";
+
+    const articleHTML = `
+        ${headerNode}  
+        <body>
+            ${content.outerHTML}
+        </body>
+    `;
+    return articleHTML; 
+} 
+
+async function downloadArticle(articleHTML, metadata) {
+    try {
+        const filename = `${metadata.articletId}.html`;
+        // Chrome downloads API 
+        const options = {
+          url: URL.createObjectURL(new Blob([articleHTML])),
+          filename: filename
         }
-    }
-    // chrome.storage.local.get(["fromBackground"]).then((result) => {
-    //     console.log("fromBackground : " + result.key);
-    //     fromBackground = result.key;
-    // });
-    if (typeof articletId != "undefined") {
-        setTimeout(extractNewArticleEventHandler(),1000);       
-    }
-})();
+        if(chrome.downloads) {
+          console.log("downloads API available"); 
+          let downloadId = await chrome.downloads.download(options);
+          console.log('Saved article to : ', filename, 'DownloadID : ', downloadId);
+        } else {
+          console.log("downloads API not available"); 
+          var file = new Blob([articleHTML], { type: "text/html" });
+          var link = document.createElement("a");
+          link.download = filename + ".html";
+          link.href = URL.createObjectURL(file);
+          link.click();
+        }
+        
+      } catch(error) {
+            console.error('Download failed : ', error);  
+      }
+}
+
+// Main logic
+async function main() {
+
+  try {
+    // Get metadata
+    const metadata = await getArticleMetadata(document.URL);
+    // Extract content
+    const content = document.querySelector(SELECTORS.ARTICLE);
+    // Build HTML 
+    const articleHTML = buildArticleHTML({
+        metadata,
+        content
+    });
+    // Download article
+    await downloadArticle(articleHTML, metadata);
+    
+  } catch (error) {
+        console.log(error); 
+  }
+
+}
+
+console.log("Starting the extension...");
+main();
+
+// document.addEventListener('DOMContentLoaded', () => {
+//   console.log("Starting the extension...inside main()");
+//   main();
+// });
